@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>2FA Authenticator</title>
+  <!-- Telegram WebApp SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Библиотека генерации кодов TOTP -->
+  <script src="https://cdn.jsdelivr.net/npm/otpauth/dist/otpauth.umd.min.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            tg: 'var(--tg-theme-bg-color, #0f172a)',
+            tgtext: 'var(--tg-theme-text-color, #f8fafc)'
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col items-center justify-center p-4 font-sans select-none">
+
+  <!-- Основная карточка -->
+  <div class="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl backdrop-blur-xl relative">
+    
+    <!-- Шапка: Выбор сервиса и кнопка Добавить -->
+    <div class="flex items-center justify-between mb-6">
+      <div class="flex-1 mr-2">
+        <label class="block text-xs font-medium text-slate-400 mb-1">Сервис</label>
+        <select id="accountSelect" onchange="switchAccount()" class="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
+          <!-- Сюда добавятся аккаунты -->
+        </select>
+      </div>
+      <button onclick="openModal()" class="mt-4 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 border border-indigo-500/30 rounded-xl p-2.5 transition active:scale-95">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- 6 ячеек кода -->
+    <div class="flex justify-center items-center gap-2 sm:gap-3 my-6">
+      <div class="otp-box w-11 h-14 sm:w-12 sm:h-16 flex items-center justify-center bg-slate-800/80 border-2 border-indigo-500/40 rounded-xl text-2xl sm:text-3xl font-mono font-bold text-white shadow-inner">-</div>
+      <div class="otp-box w-11 h-14 sm:w-12 sm:h-16 flex items-center justify-center bg-slate-800/80 border-2 border-indigo-500/40 rounded-xl text-2xl sm:text-3xl font-mono font-bold text-white shadow-inner">-</div>
+      <div class="otp-box w-11 h-14 sm:w-12 sm:h-16 flex items-center justify-center bg-slate-800/80 border-2 border-indigo-500/40 rounded-xl text-2xl sm:text-3xl font-mono font-bold text-white shadow-inner">-</div>
+      <div class="otp-box w-11 h-14 sm:w-12 sm:h-16 flex items-center justify-center bg-slate-800/80 border-2 border-indigo-500/40 rounded-xl text-2xl sm:text-3xl font-mono font-bold text-white shadow-inner">-</div>
+      <div class="otp-box w-11 h-14 sm:w-12 sm:h-16 flex items-center justify-center bg-slate-800/80 border-2 border-indigo-500/40 rounded-xl text-2xl sm:text-3xl font-mono font-bold text-white shadow-inner">-</div>
+      <div class="otp-box w-11 h-14 sm:w-12 sm:h-16 flex items-center justify-center bg-slate-800/80 border-2 border-indigo-500/40 rounded-xl text-2xl sm:text-3xl font-mono font-bold text-white shadow-inner">-</div>
+    </div>
+
+    <!-- Таймер с полоской прогресса -->
+    <div class="text-center mb-6">
+      <div class="text-xs text-slate-400 mb-2">Код обновится через <span id="timerText" class="font-mono text-indigo-400 font-bold">0:30</span></div>
+      <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+        <div id="progressBar" class="bg-indigo-500 h-full w-full transition-all duration-1000 ease-linear"></div>
+      </div>
+    </div>
+
+    <!-- Кнопка Копировать -->
+    <button id="copyBtn" onclick="copyCode()" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl shadow-lg shadow-indigo-600/30 transition active:scale-[0.98] flex items-center justify-center gap-2">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+      </svg>
+      <span id="copyBtnText">Скопировать код</span>
+    </button>
+  </div>
+
+  <!-- Модальное окно добавления сервиса -->
+  <div id="addModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-sm">
+      <h3 class="text-lg font-semibold text-white mb-4">Добавить 2FA сервис</h3>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Название (например, GitHub, VK)</label>
+          <input type="text" id="newName" placeholder="GitHub" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        </div>
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Секретный ключ (буквы и цифры)</label>
+          <input type="text" id="newSecret" placeholder="JBSWY3DPEHPK3PXP" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white uppercase focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        </div>
+      </div>
+      <div class="flex gap-3 mt-6">
+        <button onclick="closeModal()" class="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-sm font-medium transition">Отмена</button>
+        <button onclick="saveAccount()" class="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const tg = window.Telegram?.WebApp;
+    if (tg) {
+      tg.expand();
+      tg.ready();
+    }
+
+    let accounts = JSON.parse(localStorage.getItem('2fa_accounts') || '[]');
+    // Демо-аккаунт, если список пуст
+    if (accounts.length === 0) {
+      accounts = [{ name: 'Тестовый аккаунт', secret: 'JBSWY3DPEHPK3PXP' }];
+      localStorage.setItem('2fa_accounts', JSON.stringify(accounts));
+    }
+
+    let currentAccountIndex = 0;
+    let currentCode = "000000";
+
+    function updateDropdown() {
+      const select = document.getElementById('accountSelect');
+      select.innerHTML = '';
+      accounts.forEach((acc, idx) => {
+        const opt = document.createElement('option');
+        opt.value = idx;
+        opt.textContent = acc.name;
+        select.appendChild(opt);
+      });
+      select.value = currentAccountIndex;
+    }
+
+    function switchAccount() {
+      currentAccountIndex = parseInt(document.getElementById('accountSelect').value);
+      updateTOTP();
+    }
+
+    function updateTOTP() {
+      const acc = accounts[currentAccountIndex];
+      const boxes = document.querySelectorAll('.otp-box');
+
+      if (!acc) {
+        boxes.forEach(box => box.textContent = '-');
+        return;
+      }
+
+      try {
+        const totp = new OTPAuth.TOTP({
+          secret: OTPAuth.Secret.fromBase32(acc.secret.replace(/\s+/g, '').toUpperCase()),
+          digits: 6,
+          period: 30
+        });
+
+        currentCode = totp.generate();
+        boxes.forEach((box, i) => {
+          box.textContent = currentCode[i] || '-';
+        });
+      } catch (err) {
+        boxes.forEach(box => box.textContent = '!');
+      }
+
+      // Таймер
+      const secondsRemaining = 30 - (Math.floor(Date.now() / 1000) % 30);
+      document.getElementById('timerText').textContent = `0:${secondsRemaining < 10 ? '0' : ''}${secondsRemaining}`;
+      document.getElementById('progressBar').style.width = `${(secondsRemaining / 30) * 100}%`;
+    }
+
+    function copyCode() {
+      navigator.clipboard.writeText(currentCode);
+      if (tg?.HapticFeedback) {
+        tg.HapticFeedback.notificationOccurred('success');
+      }
+      const btnText = document.getElementById('copyBtnText');
+      btnText.textContent = "Скопировано!";
+      setTimeout(() => {
+        btnText.textContent = "Скопировать код";
+      }, 1500);
+    }
+
+    function openModal() {
+      document.getElementById('addModal').classList.remove('hidden');
+    }
+    function closeModal() {
+      document.getElementById('addModal').classList.add('hidden');
+    }
+
+    function saveAccount() {
+      const name = document.getElementById('newName').value.trim();
+      const secret = document.getElementById('newSecret').value.trim().toUpperCase();
+
+      if (!name || !secret) {
+        alert("Заполните оба поля");
+        return;
+      }
+
+      try {
+        OTPAuth.Secret.fromBase32(secret.replace(/\s+/g, ''));
+      } catch {
+        alert("Неверный формат ключа (он должен состоять из букв A-Z и цифр 2-7)");
+        return;
+      }
+
+      accounts.push({ name, secret });
+      localStorage.setItem('2fa_accounts', JSON.stringify(accounts));
+      currentAccountIndex = accounts.length - 1;
+      updateDropdown();
+      updateTOTP();
+      closeModal();
+      document.getElementById('newName').value = '';
+      document.getElementById('newSecret').value = '';
+    }
+
+    updateDropdown();
+    updateTOTP();
+    setInterval(updateTOTP, 1000);
+  </script>
+</body>
+</html>
