@@ -35,7 +35,12 @@ def tg(method, payload):
 
 @app.get("/", response_class=HTMLResponse)
 def page():
-    return PAGE
+    return FileResponse(ROOT / "index.html")
+
+
+@app.get("/app.js")
+def script():
+    return FileResponse(ROOT / "app.js")
 
 
 def open_app(chat_id):
