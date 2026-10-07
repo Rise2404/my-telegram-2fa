@@ -99,6 +99,8 @@
       tg.ready();
     }
 
+    const BOT_USERNAME = "Rise_avenbot";
+
     let accounts = JSON.parse(localStorage.getItem('2fa_accounts') || '[]');
     // Демо-аккаунт, если список пуст
     if (accounts.length === 0) {
@@ -186,6 +188,27 @@
 
       try {
         OTPAuth.Secret.fromBase32(secret.replace(/\s+/g, ''));
+      } catch {
+        alert("Неверный формат ключа (он должен состоять из букв A-Z и цифр 2-7)");
+        return;
+      }
+
+      accounts.push({ name, secret });
+      localStorage.setItem('2fa_accounts', JSON.stringify(accounts));
+      currentAccountIndex = accounts.length - 1;
+      updateDropdown();
+      updateTOTP();
+      closeModal();
+      document.getElementById('newName').value = '';
+      document.getElementById('newSecret').value = '';
+    }
+
+    updateDropdown();
+    updateTOTP();
+    setInterval(updateTOTP, 1000);
+  </script>
+</body>
+</html>mBase32(secret.replace(/\s+/g, ''));
       } catch {
         alert("Неверный формат ключа (он должен состоять из букв A-Z и цифр 2-7)");
         return;
