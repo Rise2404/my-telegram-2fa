@@ -10,7 +10,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 app = FastAPI(title="2FA bot")
 PAGE = Path(__file__).with_name("index.html").read_text(encoding="utf-8")
 
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
+BOT_TOKEN = os.environ.get("8729764409:AAHKfpeYTnMb6ZB3MXEabg0uWK6zFM17PhE", "")
 WEBHOOK_SECRET = os.environ.get("WEBHOOK_SECRET", "")
 WEBAPP_URL = os.environ.get("WEBAPP_URL", "")
 STAR_PRICE = int(os.environ.get("STAR_PRICE", "50"))
