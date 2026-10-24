@@ -13,9 +13,9 @@ ROOT = Path(__file__).parent
 
 # Секреты берутся ТОЛЬКО из переменных окружения (Vercel -> Settings -> Environment Variables).
 BOT_TOKEN = os.environ.get("8729764409:AAEcEjalBoikiN8KrBaslawXJllXF0OxD1I", "")
-WEBHOOK_SECRET = os.environ.get("https://my-t-2fa.vercel.app", "")
+WEBHOOK_SECRET = os.environ.get("WEBHOOK_SECRET", "")
 # Адрес не секретный, поэтому есть значение по умолчанию.
-WEBAPP_URL = os.environ.get("WEBAPP_URL", "https://my-telegram-2fa.vercel.app")
+WEBAPP_URL = os.environ.get("WEBAPP_URL", "https://my-t-2fa.vercel.app")
 STAR_PRICE = int(os.environ.get("STAR_PRICE", "50"))
 API = "https://api.telegram.org/bot" + BOT_TOKEN
 
