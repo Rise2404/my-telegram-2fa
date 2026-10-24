@@ -3,6 +3,3 @@ name = "hub-2fa"
 version = "1.0.0"
 requires-python = ">=3.12"
 dependencies = ["fastapi>=0.115"]
-
-[tool.vercel]
-entrypoint = "bot:app"
