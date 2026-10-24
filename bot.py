@@ -5,14 +5,14 @@ import urllib.error
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 
 app = FastAPI(title="2FA bot")
-PAGE = Path(__file__).with_name("index.html").read_text(encoding="utf-8")
+ROOT = Path(__file__).parent
 
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
-WEBHOOK_SECRET = os.environ.get("WEBHOOK_SECRET", "")
-WEBAPP_URL = os.environ.get("WEBAPP_URL", "")
+BOT_TOKEN = os.environ.get("8729764409:AAEyPNZSzbEJgYjtdqaxWWIKhUeWa5vxVjE", "")
+WEBHOOK_SECRET = os.environ.get("https://my-telegram-2fa.vercel.app", "")
+WEBAPP_URL = os.environ.get("rise2fa_8f3k29x", "")
 STAR_PRICE = int(os.environ.get("STAR_PRICE", "50"))
 API = "https://api.telegram.org/bot" + BOT_TOKEN
 
@@ -33,7 +33,7 @@ def tg(method, payload):
         return {"ok": False, "description": exc.read().decode("utf-8", errors="replace")}
 
 
-@app.get("/", response_class=HTMLResponse)
+@app.get("/")
 def page():
     return FileResponse(ROOT / "index.html")
 
@@ -41,6 +41,20 @@ def page():
 @app.get("/app.js")
 def script():
     return FileResponse(ROOT / "app.js")
+
+
+@app.on_event("startup")
+def set_webhook():
+    # Регистрирует вебхук автоматически, если заданы BOT_TOKEN и WEBAPP_URL
+    if not BOT_TOKEN or not WEBAPP_URL:
+        return
+    payload = {
+        "url": WEBAPP_URL.rstrip("/") + "/api/telegram",
+        "allowed_updates": ["message", "pre_checkout_query"],
+    }
+    if WEBHOOK_SECRET:
+        payload["secret_token"] = WEBHOOK_SECRET
+    print("setWebhook:", tg("setWebhook", payload))
 
 
 def open_app(chat_id):
